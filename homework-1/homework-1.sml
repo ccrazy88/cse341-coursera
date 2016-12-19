@@ -1,115 +1,103 @@
 (* Regular Problems *)
 
-fun is_older(date1: int * int * int, date2: int * int * int) =
-  let
-    val year1 = #1 date1 val month1 = #2 date1 val day1 = #3 date1
-    val year2 = #1 date2 val month2 = #2 date2 val day2 = #3 date2
-  in
-    if year1 <> year2 then year1 < year2
-    else
-      if month1 <> month2 then month1 < month2
-      else day1 < day2
+fun is_older ((year1, month1, day1), (year2, month2, day2)) =
+  if year1 <> year2 then year1 < year2
+  else if month1 <> month2 then month1 < month2
+  else day1 < day2
+
+fun number_in_month ([], _) = 0
+  | number_in_month ((_, month, _) :: dates', givenMonth) =
+      (if month = givenMonth then 1 else 0) +
+      number_in_month (dates', givenMonth)
+
+fun number_in_months (_, []) = 0
+  | number_in_months (dates, month :: months') =
+      number_in_month (dates, month) + number_in_months (dates, months')
+
+fun dates_in_month ([], _) = []
+  | dates_in_month ((year, month, day) :: dates', givenMonth) =
+      let val datesInMonth' = dates_in_month (dates', givenMonth)
+      in
+        if month = givenMonth
+          then (year, month, day) :: datesInMonth'
+        else datesInMonth'
+      end
+
+fun dates_in_months (_, []) = []
+  | dates_in_months (dates, month :: months') =
+      dates_in_month (dates, month) @ dates_in_months (dates, months')
+
+(* The original homework assignment accepted a nonexhaustive function. *)
+fun get_nth (element :: _, 1) = element
+  | get_nth (_ :: elements', n) = get_nth (elements', n - 1)
+
+fun date_to_string (year, month, day) =
+  let val months = ["January", "February", "March", "April", "May", "June",
+                    "July", "August", "September", "October", "November",
+                    "December"]
+  in get_nth (months, month) ^ " " ^ Int.toString day ^ ", " ^ Int.toString year
   end
 
-fun number_in_month(dates: (int * int * int) list, month: int) =
-  if null dates then 0
-  else (if #2 (hd dates) = month then 1 else 0) +
-       number_in_month(tl dates, month)
+(* The original homework assignment accepted a nonexhaustive function. *)
+fun number_before_reaching_sum (sum, number :: numbers') =
+  if sum <= number then 0
+  else 1 + number_before_reaching_sum (sum - number, numbers')
 
-fun number_in_months(dates: (int * int * int) list, months: int list) =
-  if null months then 0
-  else number_in_month(dates, hd months) + number_in_months(dates, tl months)
-
-fun dates_in_month(dates: (int * int * int) list, month: int) =
-  if null dates then []
-  else
-    let val tailDatesInMonth = dates_in_month(tl dates, month)
-    in
-      if #2 (hd dates) = month then hd dates :: tailDatesInMonth
-      else tailDatesInMonth
-    end
-
-fun dates_in_months(dates: (int * int * int) list, months: int list) =
-  if null months then []
-  else dates_in_month(dates, hd months) @ dates_in_months(dates, tl months)
-
-fun get_nth(strings: string list, n: int) =
-  if n = 1 then hd strings
-  else get_nth(tl strings, n - 1)
-
-fun date_to_string(date: int * int * int) =
-  let
-    val year = #1 date
-    val month = #2 date
-    val day = #3 date
-    val months = ["January", "February", "March", "April", "May", "June",
-                  "July", "August", "September", "October", "November",
-                  "December"]
-  in
-    get_nth(months, month) ^ " " ^ Int.toString(day) ^ ", " ^ Int.toString(year)
-  end
-
-fun number_before_reaching_sum(sum: int, numbers: int list) =
-  if sum <= hd numbers then 0
-  else 1 + number_before_reaching_sum(sum - hd numbers, tl numbers)
-
-fun what_month(dayOfYear: int) =
+fun what_month dayOfYear =
   let val daysInMonths = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-  in 1 + number_before_reaching_sum(dayOfYear, daysInMonths)
+  in 1 + number_before_reaching_sum (dayOfYear, daysInMonths)
   end
 
-fun month_range(day1: int, day2: int) =
+fun month_range (day1, day2) =
   if day1 > day2 then []
-  else what_month(day1) :: month_range(day1 + 1, day2)
+  else what_month day1 :: month_range (day1 + 1, day2)
 
-fun oldest(dates: (int * int * int) list) =
-  if null dates then NONE
-  else
-    let val tailOldest = oldest(tl dates)
-    in
-      if isSome tailOldest andalso is_older(valOf tailOldest, hd dates)
-      then tailOldest
-      else SOME (hd dates)
+fun oldest [] = NONE
+  | oldest (date :: dates') =
+      let val oldest' = oldest dates'
+      in
+        case oldest' of
+            NONE => SOME date
+          | SOME someOldest' =>
+              if is_older (someOldest', date) then oldest' else SOME date
     end
 
 (* Challenge #1 *)
 
-fun month_in_months(month: int, months: int list) =
-  not (null months) andalso (month = hd months orelse
-                             month_in_months(month, tl months))
+fun month_in_months (_, []) = false
+  | month_in_months (givenMonth, month :: months') =
+      givenMonth = month orelse month_in_months(givenMonth, months')
 
-fun deduplicate_months(months: int list) =
-  if null months then []
-  else
-    let val tailDeduplicatedMonths = deduplicate_months(tl months)
+fun deduplicate_months [] = []
+  | deduplicate_months (month :: months') =
+    let val deduplicatedMonths' = deduplicate_months months'
     in
-      if month_in_months(hd months, tailDeduplicatedMonths)
-      then tailDeduplicatedMonths
-      else hd months :: tailDeduplicatedMonths
+      if month_in_months (month, deduplicatedMonths')
+        then deduplicatedMonths'
+      else month :: deduplicatedMonths'
     end
 
-fun number_in_months_challenge(dates: (int * int * int) list,
-                               months: int list) =
-  number_in_months(dates, deduplicate_months(months))
+fun number_in_months_challenge (dates, months) =
+  number_in_months (dates, deduplicate_months months)
 
-fun dates_in_months_challenge(dates: (int * int * int) list, months: int list) =
-  dates_in_months(dates, deduplicate_months(months))
+fun dates_in_months_challenge (dates, months) =
+  dates_in_months (dates, deduplicate_months months)
 
 (* Challenge #2 *)
 
-fun reasonable_date(date: int * int * int) =
+fun reasonable_date (year, month, day) =
   let
-    val year = #1 date val month = #2 date val day = #3 date
     val isLeapYear =
       year mod 400 = 0 orelse (year mod 4 = 0 andalso year mod 100 <> 0)
     val daysInFeb = if isLeapYear then 29 else 28
     val daysInMonths = [31, daysInFeb, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    fun days_in_month(month: int, daysInMonths: int list) =
-      if month = 1 then hd daysInMonths
-      else days_in_month(month - 1, tl daysInMonths)
+    (* The original homework assignment accepted a nonexhaustive function. *)
+    fun days_in_month (1, daysInMonth :: _) = daysInMonth
+      | days_in_month (month, _ :: daysInMonths') =
+          days_in_month (month - 1, daysInMonths')
   in
     year > 0 andalso
     (month >= 1 andalso month <= 12) andalso
-    (day >= 1 andalso day <= days_in_month(month, daysInMonths))
+    (day >= 1 andalso day <= days_in_month (month, daysInMonths))
   end
 
